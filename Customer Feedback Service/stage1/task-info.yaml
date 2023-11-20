@@ -8,3 +8,11 @@ files:
     visible: true
   - name: src/resources/application.properties
     visible: true
+  - name: src/feedbackservice/feedback/FeedbackRecord.java
+    visible: true
+  - name: src/feedbackservice/feedback/FeedbackRepository.java
+    visible: true
+  - name: src/feedbackservice/feedback/FeedbackRestController.java
+    visible: true
+  - name: src/feedbackservice/feedback/FeedbackUploadRequest.java
+    visible: true
