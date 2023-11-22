@@ -9,59 +9,35 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 import org.hyperskill.hstest.dynamic.DynamicTest;
 import org.hyperskill.hstest.dynamic.input.DynamicTesting;
+import org.hyperskill.hstest.exception.outcomes.WrongAnswer;
 import org.hyperskill.hstest.mocks.web.response.HttpResponse;
 import org.hyperskill.hstest.stage.SpringTest;
 import org.hyperskill.hstest.testcase.CheckResult;
 
-import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.hyperskill.hstest.testing.expect.Expectation.expect;
-import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isArray;
-import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isObject;
-import static org.hyperskill.hstest.testing.expect.json.JsonChecker.isString;
-
 public class FeedbackServiceTests extends SpringTest {
+    private static final String mongoUrl = "mongodb://localhost:27017";
+    private static final String mongoDatabase = "feedback_db";
+    private static final String mongoCollection = "feedback";
     private final Gson gson = new Gson();
 
     CheckResult testPostFeedback(FeedbackItem[] data) {
         for (var item : data) {
             var payload = gson.toJson(item);
             HttpResponse response = post("/feedback", payload).send();
-            if (response.getStatusCode() != 201) {
+
+            checkStatusCode(response, 201);
+
+            var location = response.getHeaders().get("Location");
+            if (location == null || !location.matches("/feedback/[a-f0-9]{24}")) {
                 return CheckResult.wrong("""
                         Request: POST /feedback
-                        Request body: %s
-                        Expected response status code 201 but received %d
-                        """.formatted(payload, response.getStatusCode()));
+                        Expected to find the 'Location' header with a document URL '/feedback/<ObjectId>',
+                        but found: %s
+                        """.formatted(location));
             }
         }
-        return CheckResult.correct();
-    }
-
-    CheckResult testGetFeedback(FeedbackItem[] data) {
-        HttpResponse response = get("/feedback").send();
-        expect(response.getContent()).asJson().check(
-                isArray()
-                        .item(isObject()
-                                .value("id", isString())
-                                .value("text", data[2].text())
-                                .value("customer", data[2].customer())
-                                .value("createdAt", isString())
-                        )
-                        .item(isObject()
-                                .value("id", isString())
-                                .value("text", data[1].text())
-                                .value("customer", data[1].customer())
-                                .value("createdAt", isString())
-                        )
-                        .item(isObject()
-                                .value("id", isString())
-                                .value("text", data[0].text())
-                                .value("customer", data[0].customer())
-                                .value("createdAt", isString())
-                        )
-        );
         return CheckResult.correct();
     }
 
@@ -70,21 +46,22 @@ public class FeedbackServiceTests extends SpringTest {
                 .version(ServerApiVersion.V1)
                 .build();
 
-        String connectionString = "mongodb://localhost:27017/hs-test?directConnection=true";
         MongoClientSettings settings = MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString(connectionString))
+                .applyConnectionString(new ConnectionString(mongoUrl))
                 .serverApi(serverApi)
                 .build();
 
-        // Create a new client and connect to the server
         try (MongoClient mongoClient = MongoClients.create(settings)) {
-            MongoDatabase database = mongoClient.getDatabase("feedback_db");
-            var count = database.getCollection("feedback").countDocuments();
+            MongoDatabase database = mongoClient.getDatabase(mongoDatabase);
+            var count = database.getCollection(mongoCollection).countDocuments();
             if (count != data.length) {
                 return CheckResult.wrong("""
-                        Wrong number of documents in the 'feedback' collection in the 'feedback_db' database.
-                        Expected: %d, found: %d")
-                        """.formatted(feedbackItems.length, count));
+                        Wrong number of documents in the '%s' collection in the '%s' database.
+                        Expected: %d documents but found: %d")
+                        """.formatted(mongoCollection, mongoDatabase, feedbackItems.length, count));
+            }
+            for (org.bson.Document doc : database.getCollection("feedback").find()) {
+                System.out.println(doc);
             }
         } catch (MongoException e) {
             return CheckResult.wrong("Failed to connect the 'feedback_db' database");
@@ -92,22 +69,29 @@ public class FeedbackServiceTests extends SpringTest {
         return CheckResult.correct();
     }
 
+    private void checkStatusCode(HttpResponse response, int expected) {
+        var method = response.getRequest().getMethod();
+        var endpoint = response.getRequest().getEndpoint();
+        var body = response.getRequest().getContent();
+        var actual = response.getStatusCode();
+
+        if (response.getStatusCode() != expected) {
+            throw new WrongAnswer("""
+                        Request: %s %s
+                        Request body: %s
+                        Expected response status code %d but received %d
+                        """.formatted(method, endpoint, body, expected, actual));
+        }
+    }
+
     FeedbackItem[] feedbackItems = Stream
-            .generate(() -> {
-                var rndText = String.valueOf(System.currentTimeMillis());
-                var rndCustomer = "customer-" + UUID.randomUUID();
-                return new FeedbackItem(rndText, rndCustomer);
-            })
-            .limit(3)
+            .generate(FeedbackItemMother::createRandom)
+            .limit(20)
             .toArray(FeedbackItem[]::new);
 
     @DynamicTest
     DynamicTesting[] dt = {
             () -> testPostFeedback(feedbackItems),
-            () -> testGetFeedback(feedbackItems),
             () -> testMongoCollection(feedbackItems),
     };
-}
-
-record FeedbackItem(String text, String customer) {
 }

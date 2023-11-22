@@ -1,14 +1,11 @@
 package feedbackservice.feedback;
 
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.net.URI;
 
 @RestController
 public class FeedbackRestController {
@@ -19,17 +16,15 @@ public class FeedbackRestController {
     }
 
     @PostMapping("/feedback")
-    @ResponseStatus(HttpStatus.CREATED)
-    public void uploadFeedback(@RequestBody FeedbackUploadRequest request) {
-        var document = new FeedbackRecord();
-        document.setText(request.text());
+    public ResponseEntity<Void> uploadFeedback(@RequestBody FeedbackUploadRequest request) {
+        var document = new FeedbackDocument();
+        document.setRating(request.rating());
+        document.setFeedback(request.feedback());
         document.setCustomer(request.customer());
-        repository.save(document);
-    }
+        document.setProduct(request.product());
+        document.setVendor(request.vendor());
+        var id = repository.save(document).getId();
 
-    @GetMapping("/feedback")
-    public List<FeedbackRecord> getAllFeedback() {
-        var sort = Sort.by(Sort.Order.desc("createdAt"));
-        return repository.findAll(sort);
+        return ResponseEntity.created(URI.create("/feedback/" + id)).build();
     }
 }

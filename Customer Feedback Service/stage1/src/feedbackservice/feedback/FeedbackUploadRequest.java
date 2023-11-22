@@ -1,7 +1,11 @@
 package feedbackservice.feedback;
 
 public record FeedbackUploadRequest(
-        String text,
-        String customer
+        Integer rating,
+
+        String feedback,
+        String customer,
+        String product,
+        String vendor
 ) {
 }

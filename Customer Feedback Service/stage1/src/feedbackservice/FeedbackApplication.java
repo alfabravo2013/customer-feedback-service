@@ -21,8 +21,8 @@ class MongoContainerProvider {
     private final MongoDBContainer container;
 
     public MongoContainerProvider() {
-        container = new MongoDBContainer("mongo:6-jammy")
-                .withCreateContainerCmdModifier(cmd -> cmd.withName("hs-mongo"));
+        container = new MongoDBContainer("mongo:5");
+        container.addEnv("MONGO_INITDB_DATABASE", "feedback_db");
         container.setPortBindings(List.of("27017:27017"));
     }
 
