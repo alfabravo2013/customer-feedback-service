@@ -84,18 +84,17 @@ public class FeedbackServiceTests extends SpringTest {
         var sortedAndPagedData = Arrays.stream(data).sorted(Comparator.comparing(FeedbackItem::getId).reversed())
                 .skip(offset)
                 .limit(limit)
-                .toArray(FeedbackItem[]::new);
+                .toList();
 
-        var params = "";
-        if (page != 0 && size != 0) {
-            params += "?page=%d&perPage=%d".formatted(page, size);
-        } else if (page != 0) {
-            params += "?page=%d".formatted(page);
-        } else if (size != 0){
-            params += "?perPage=%d".formatted(size);
+        var request = get("/feedback");
+        if (page != 0) {
+            request.addParam("page", String.valueOf(page));
+        }
+        if (size != 0) {
+            request.addParam("perPage", String.valueOf(size));
         }
 
-        var response = get("/feedback" + params).send();
+        var response = request.send();
         checkStatusCode(response, 200);
 
         JsonObjectBuilder rootObjectBuilder = isObject()
@@ -103,7 +102,7 @@ public class FeedbackServiceTests extends SpringTest {
                 .value("is_first_page", page < 2)
                 .value("is_last_page", (offset + limit) >= data.length);
 
-        JsonArrayBuilder arrayBuilder = isArray(sortedAndPagedData.length);
+        JsonArrayBuilder arrayBuilder = isArray(sortedAndPagedData.size());
         for (var item : sortedAndPagedData) {
             JsonObjectBuilder objectBuilder = getJsonObjectBuilderFrom(item);
             arrayBuilder = arrayBuilder.item(objectBuilder);

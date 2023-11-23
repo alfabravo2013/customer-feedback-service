@@ -84,11 +84,11 @@ class FeedbackItemMother {
 
     public static FeedbackItem create() {
         var item = new FeedbackItem();
-        item.setRating(rnd.nextInt(1, 6));
+        item.setRating(getRandomRating());
         item.setFeedback(feedback[rnd.nextInt(feedback.length)]);
-        item.setCustomer(customers[rnd.nextInt(customers.length)]);
-        item.setProduct(products[rnd.nextInt(products.length)]);
-        item.setVendor(vendors[rnd.nextInt(vendors.length)]);
+        item.setCustomer(getRandomCustomer());
+        item.setProduct(getRandomProduct());
+        item.setVendor(getRandomVendor());
         return item;
     }
 
@@ -128,5 +128,21 @@ class FeedbackItemMother {
         return Stream.generate(FeedbackItemMother::createRandom)
                 .limit(rnd.nextInt(min, max))
                 .toArray(FeedbackItem[]::new);
+    }
+
+    public static String getRandomCustomer() {
+        return customers[rnd.nextInt(customers.length)];
+    }
+
+    public static String getRandomProduct() {
+        return products[rnd.nextInt(products.length)];
+    }
+
+    public static int getRandomRating() {
+        return rnd.nextInt(1, 6);
+    }
+
+    public static String getRandomVendor() {
+        return vendors[rnd.nextInt(vendors.length)];
     }
 }

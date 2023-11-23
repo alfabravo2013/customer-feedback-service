@@ -76,13 +76,14 @@ public class FeedbackServiceTests extends SpringTest {
     }
 
     CheckResult testGetAllSortedById(FeedbackItem[] data) {
-        var sortedData = Arrays.stream(data).sorted(Comparator.comparing(FeedbackItem::getId).reversed())
-                .toArray(FeedbackItem[]::new);
+        var sortedData = Arrays.stream(data)
+                .sorted(Comparator.comparing(FeedbackItem::getId).reversed())
+                .toList();
 
         var response = get("/feedback").send();
         checkStatusCode(response, 200);
 
-        JsonArrayBuilder arrayBuilder = isArray(sortedData.length);
+        JsonArrayBuilder arrayBuilder = isArray(sortedData.size());
         for (var item : sortedData) {
             JsonObjectBuilder objectBuilder = getJsonObjectBuilderFrom(item);
             arrayBuilder = arrayBuilder.item(objectBuilder);

@@ -1,5 +1,6 @@
 package feedbackservice.feedback;
 
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
@@ -41,21 +42,29 @@ public class FeedbackRestController {
     @GetMapping("/feedback")
     public ResponseEntity<FeedbackPageResponse> getAllSortedBy(
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer perPage
+            @RequestParam(required = false) Integer perPage,
+            @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false) String customer,
+            @RequestParam(required = false) String product,
+            @RequestParam(required = false) String vendor
     ) {
         int requestedPage = getSanitizedPage(page);
         int requestedPageSize = getSanitizedPerPage(perPage);
 
         var sortBy = Sort.by("id").descending();
-        var pageRequest = PageRequest.of(requestedPage - 1, requestedPageSize, sortBy);
-        var fetchedPage = repository.findAll(pageRequest);
 
-        var payload = new FeedbackPageResponse(
-                fetchedPage.getTotalElements(),
-                fetchedPage.isFirst(),
-                fetchedPage.isLast(),
-                fetchedPage.getContent()
-        );
+        var probe = new FeedbackDocument();
+        probe.setRating(rating);
+        probe.setCustomer(customer);
+        probe.setProduct(product);
+        probe.setVendor(vendor);
+
+        var example = Example.of(probe);
+
+        var pageRequest = PageRequest.of(requestedPage - 1, requestedPageSize, sortBy);
+        var fetchedPage = repository.findAll(example, pageRequest);
+
+        var payload = FeedbackPageResponse.of(fetchedPage);
 
         return ResponseEntity.ok().body(payload);
     }
